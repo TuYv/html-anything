@@ -98,3 +98,68 @@ export function cssToPptxTextProps(s: CssTextSnapshot, pxPerInch = PX_PER_INCH):
     align: textAlignToPptx(s.textAlign),
   };
 }
+
+// ─── browser-bound DOM helpers ───────────────────────────────────────
+// Not unit-tested for layout (happy-dom has none); collection + strip are
+// DOM-shape only and ARE unit-tested. Position reading is covered by e2e.
+
+/** True iff the element has at least one non-whitespace direct text node. */
+export function hasDirectText(el: Element): boolean {
+  for (const n of Array.from(el.childNodes)) {
+    if (n.nodeType === 3 /* TEXT_NODE */ && (n.textContent ?? "").trim()) return true;
+  }
+  return false;
+}
+
+/**
+ * Collect the block-level elements that own text, top-down, skipping any
+ * element nested inside an already-collected one. So `<p>Hello <strong>w</strong></p>`
+ * yields just the `<p>` (whole `textContent`), never a duplicate `<strong>`.
+ */
+export function collectTextElements(doc: Document): HTMLElement[] {
+  const picked: HTMLElement[] = [];
+  for (const el of Array.from(doc.body.querySelectorAll<HTMLElement>("*"))) {
+    if (!hasDirectText(el)) continue;
+    if (picked.some((p) => p.contains(el))) continue;
+    picked.push(el);
+  }
+  return picked;
+}
+
+/** Make the given elements' text invisible so it doesn't bake into the bg PNG. */
+export function stripTextForBackground(els: HTMLElement[]): void {
+  for (const el of els) {
+    el.style.setProperty("color", "transparent", "important");
+    el.style.setProperty("-webkit-text-fill-color", "transparent", "important");
+    el.style.setProperty("text-shadow", "none", "important");
+  }
+}
+
+/** Read live layout + computed style into editable text-box descriptors. */
+export function elementsToTextBoxes(els: HTMLElement[], win: Window): TextBoxDescriptor[] {
+  const out: TextBoxDescriptor[] = [];
+  for (const el of els) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) continue;
+    const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const cs = win.getComputedStyle(el);
+    const props = cssToPptxTextProps({
+      fontFamily: cs.fontFamily,
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      fontStyle: cs.fontStyle,
+      color: cs.color,
+      textAlign: cs.textAlign,
+    });
+    out.push({
+      xIn: pxToInches(rect.left),
+      yIn: pxToInches(rect.top),
+      wIn: pxToInches(rect.width),
+      hIn: pxToInches(rect.height),
+      text,
+      ...props,
+    });
+  }
+  return out;
+}

@@ -7,6 +7,9 @@ import {
   textAlignToPptx,
   mapFontFamily,
   cssToPptxTextProps,
+  hasDirectText,
+  collectTextElements,
+  stripTextForBackground,
 } from "../pptx-textbox";
 
 describe("pptx-textbox 纯映射", () => {
@@ -69,5 +72,41 @@ describe("pptx-textbox 纯映射", () => {
       italic: true,
       align: "center",
     });
+  });
+});
+
+describe("pptx-textbox DOM 提取（happy-dom）", () => {
+  function docFrom(bodyHtml: string): Document {
+    const doc = document.implementation.createHTMLDocument("t");
+    doc.body.innerHTML = bodyHtml;
+    return doc;
+  }
+
+  it("hasDirectText: 仅当有非空直接文本节点", () => {
+    const doc = docFrom('<p id="a">hi</p><div id="b"><span>x</span></div><p id="c">   </p>');
+    expect(hasDirectText(doc.getElementById("a")!)).toBe(true);
+    expect(hasDirectText(doc.getElementById("b")!)).toBe(false);
+    expect(hasDirectText(doc.getElementById("c")!)).toBe(false);
+  });
+
+  it("collectTextElements: 取含直接文字的块, 不重复嵌入子元素", () => {
+    const doc = docFrom(
+      '<div><p>A</p><p>B</p></div><p>Hello <strong>world</strong></p>',
+    );
+    const els = collectTextElements(doc);
+    const texts = els.map((e) => (e.textContent ?? "").replace(/\s+/g, " ").trim());
+    expect(texts).toEqual(["A", "B", "Hello world"]);
+  });
+
+  it("stripTextForBackground: 把文本设为透明", () => {
+    const doc = docFrom('<p id="a">hi</p>');
+    const el = doc.getElementById("a") as HTMLElement;
+    stripTextForBackground([el]);
+    expect(el.style.getPropertyValue("color")).toBe("transparent");
+    expect(el.style.getPropertyValue("-webkit-text-fill-color")).toBe("transparent");
+    expect(el.style.getPropertyValue("text-shadow")).toBe("none");
+    expect(el.style.getPropertyPriority("color")).toBe("important");
+    expect(el.style.getPropertyPriority("-webkit-text-fill-color")).toBe("important");
+    expect(el.style.getPropertyPriority("text-shadow")).toBe("important");
   });
 });
