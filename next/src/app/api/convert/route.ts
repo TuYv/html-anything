@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { invokeAgent } from "@/lib/agents/invoke";
 import { loadSkill } from "@/lib/templates/loader";
 import { assemblePrompt } from "@/lib/templates/shared";
+import { ensureWorkdir, sanitizeTaskId } from "@/lib/artifacts/workdir";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,8 @@ type Body = {
   content: string;
   format?: string;
   model?: string;
-  cwd?: string;
+  /** Per-task isolation workdir key — the agent runs in ~/.html-anything/work/<taskId>/. */
+  taskId?: string;
   /**
    * Optional absolute path to the agent binary. The Settings UI lets the
    * user override auto-detection when their CLI lives somewhere our PATH
@@ -74,13 +76,13 @@ export async function POST(req: NextRequest) {
     content,
     format = "text",
     model,
-    cwd,
+    taskId,
     binOverride,
     editFromHtml,
     editFromContent,
   } = body;
-  if (!agent || !templateId || !content) {
-    return new Response("missing required fields: agent, templateId, content", {
+  if (!agent || !templateId || !content || !taskId) {
+    return new Response("missing required fields: agent, templateId, content, taskId", {
       status: 400,
     });
   }
@@ -102,6 +104,19 @@ export async function POST(req: NextRequest) {
   } else {
     prompt = assemblePrompt({ body: skill.body, content, format });
   }
+  let safeId: string;
+  try {
+    safeId = sanitizeTaskId(taskId);
+  } catch {
+    return new Response("invalid taskId", { status: 400 });
+  }
+  let workdirCwd: string;
+  try {
+    workdirCwd = ensureWorkdir(safeId).dir;
+  } catch (err) {
+    return new Response(`workdir error: ${err instanceof Error ? err.message : String(err)}`, { status: 500 });
+  }
+
   const abortCtl = new AbortController();
   req.signal?.addEventListener("abort", () => abortCtl.abort(), { once: true });
 
@@ -109,7 +124,7 @@ export async function POST(req: NextRequest) {
     agent,
     prompt,
     model,
-    cwd,
+    cwd: workdirCwd,
     binOverride,
     signal: abortCtl.signal,
   });
