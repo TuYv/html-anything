@@ -20,11 +20,12 @@ async function withSlideIframe<T>(
   const wrap = document.createElement("div");
   wrap.style.cssText = `
     position: fixed;
-    top: 0; left: -100000px;
+    top: 0; left: 0;
     width: 1920px; height: 1080px;
     overflow: hidden;
     pointer-events: none;
-    z-index: -1;
+    opacity: 0;
+    z-index: -9999;
   `;
   const iframe = document.createElement("iframe");
   iframe.setAttribute("title", `slide-${slide.id}`);
@@ -43,12 +44,20 @@ async function withSlideIframe<T>(
   document.body.appendChild(wrap);
 
   try {
+    // Always wait for the "load" event rather than checking readyState
+    // immediately: setting srcdoc fires a navigation that may briefly leave
+    // contentDocument in a "complete" blank state before the new document
+    // loads, causing a premature resolve and a zero-height doc.
     await new Promise<void>((res) => {
-      const done = () => res();
-      if (iframe.contentDocument?.readyState === "complete") return done();
-      iframe.addEventListener("load", done, { once: true });
-      setTimeout(done, 4000);
+      iframe.addEventListener("load", () => res(), { once: true });
+      // Safety net: if load never fires, unblock after 6 s.
+      setTimeout(() => res(), 6000);
     });
+    // Give Chromium (including headless mode) at least two rAF ticks so the
+    // new document's layout pass completes and getBoundingClientRect() returns
+    // real pixel values.
+    await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+    await new Promise<void>((res) => setTimeout(res, 150));
     const doc = iframe.contentDocument;
     if (!doc) throw new Error("iframe document not ready");
     return await fn(iframe, doc);
