@@ -2,27 +2,30 @@
 
 import type { DeckSlide } from "@/lib/deck";
 import { iframeToBlob, downloadBlob } from "./image";
+import {
+  collectTextElements,
+  elementsToTextBoxes,
+  stripTextForBackground,
+} from "./pptx-textbox";
 
 /**
- * Render every slide off-screen one at a time and snapshot it. We re-use the
- * existing `iframeToBlob` helper (which already handles fonts / images /
- * Tailwind CDN) — much more reliable than trying to clone the DOM ourselves.
- *
- * The off-screen iframe is sized at the slide's native canvas (1920×1080 by
- * convention) so the screenshot captures the un-scaled layout.
+ * Set up an off-screen 1920×1080 same-origin iframe for one slide, await load,
+ * hand it to `fn`, and always tear it down. The srcdoc is tweaked so the slide
+ * renders 1:1 at top-left (no preview centering/scaling) for screenshot/layout.
  */
-async function renderSlideToBlob(slide: DeckSlide, scale = 2): Promise<Blob> {
+async function withSlideIframe<T>(
+  slide: DeckSlide,
+  fn: (iframe: HTMLIFrameElement, doc: Document) => Promise<T>,
+): Promise<T> {
   const wrap = document.createElement("div");
-  // Park it off-screen with a known width — every deck-* skill targets a
-  // 1920×1080 canvas, but other decks may not. We size the iframe big enough
-  // to host the slide's natural width; iframeToBlob measures the document.
   wrap.style.cssText = `
     position: fixed;
-    top: 0; left: -100000px;
+    top: 0; left: 0;
     width: 1920px; height: 1080px;
     overflow: hidden;
     pointer-events: none;
-    z-index: -1;
+    opacity: 0;
+    z-index: -9999;
   `;
   const iframe = document.createElement("iframe");
   iframe.setAttribute("title", `slide-${slide.id}`);
@@ -30,8 +33,6 @@ async function renderSlideToBlob(slide: DeckSlide, scale = 2): Promise<Blob> {
   iframe.style.cssText = `
     width: 1920px; height: 1080px; border: 0; background: ${slide.bg ?? "#fff"};
   `;
-  // We need a tweaked srcdoc that *doesn't* center / scale — for screenshot
-  // we want the slide rendered at 1:1.
   iframe.srcdoc = slide.html.replace(
     /\.slide\s*\{\s*transform-origin[^}]*\}/i,
     ".slide { transform: none !important; transform-origin: top left !important; }",
@@ -43,17 +44,31 @@ async function renderSlideToBlob(slide: DeckSlide, scale = 2): Promise<Blob> {
   document.body.appendChild(wrap);
 
   try {
-    // Wait for the iframe to commit srcdoc and load.
+    // Always wait for the "load" event rather than checking readyState
+    // immediately: setting srcdoc fires a navigation that may briefly leave
+    // contentDocument in a "complete" blank state before the new document
+    // loads, causing a premature resolve and a zero-height doc.
     await new Promise<void>((res) => {
-      const done = () => res();
-      if (iframe.contentDocument?.readyState === "complete") return done();
-      iframe.addEventListener("load", done, { once: true });
-      setTimeout(done, 4000);
+      iframe.addEventListener("load", () => res(), { once: true });
+      // Safety net: if load never fires, unblock after 6 s.
+      setTimeout(() => res(), 6000);
     });
-    return await iframeToBlob(iframe, { scale });
+    // Give Chromium (including headless mode) at least two rAF ticks so the
+    // new document's layout pass completes and getBoundingClientRect() returns
+    // real pixel values.
+    await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+    await new Promise<void>((res) => setTimeout(res, 150));
+    const doc = iframe.contentDocument;
+    if (!doc) throw new Error("iframe document not ready");
+    return await fn(iframe, doc);
   } finally {
     wrap.remove();
   }
+}
+
+/** Screenshot one slide at native 1920×1080. */
+async function renderSlideToBlob(slide: DeckSlide, scale = 2): Promise<Blob> {
+  return withSlideIframe(slide, (iframe) => iframeToBlob(iframe, { scale }));
 }
 
 /** Export every slide as a PNG and bundle them into a single ZIP. */
@@ -76,7 +91,14 @@ export async function exportDeckPngZip(
   downloadBlob(out, `${basename}-${Date.now()}.zip`);
 }
 
-/** Export the deck as a multi-slide PPTX. Each slide goes in as a full-bleed PNG. */
+/**
+ * Export the deck as a multi-slide PPTX with EDITABLE text.
+ *
+ * Per slide: read text boxes from live layout, hide that text, screenshot the
+ * (now text-free) slide as the background image, then add the background plus
+ * native pptx text boxes on top. If extraction fails or finds no text, fall
+ * back to the old behavior — a single full-bleed screenshot WITH text baked in.
+ */
 export async function exportDeckPptx(
   slides: DeckSlide[],
   basename = "deck",
@@ -88,10 +110,39 @@ export async function exportDeckPptx(
   pptx.layout = "LAYOUT_WIDE"; // 13.333 × 7.5 inches → 16:9
   for (let i = 0; i < slides.length; i++) {
     onProgress?.(i + 1, slides.length);
-    const blob = await renderSlideToBlob(slides[i]);
-    const dataUrl = await blobToDataUrl(blob);
     const s = pptx.addSlide();
-    s.addImage({ data: dataUrl, x: 0, y: 0, w: "100%", h: "100%" });
+    try {
+      const { bgDataUrl, descriptors } = await withSlideIframe(slides[i], async (iframe, doc) => {
+        const win = iframe.contentWindow;
+        if (!win) throw new Error("iframe window not ready");
+        const els = collectTextElements(doc);
+        const boxes = elementsToTextBoxes(els, win);
+        if (boxes.length > 0) stripTextForBackground(els);
+        const blob = await iframeToBlob(iframe, { scale: 2 });
+        return { bgDataUrl: await blobToDataUrl(blob), descriptors: boxes };
+      });
+      s.addImage({ data: bgDataUrl, x: 0, y: 0, w: "100%", h: "100%" });
+      for (const d of descriptors) {
+        s.addText(d.text, {
+          x: d.xIn, y: d.yIn, w: d.wIn, h: d.hIn,
+          fontFace: d.fontFace,
+          fontSize: d.fontSizePt,
+          color: d.colorHex,
+          bold: d.bold,
+          italic: d.italic,
+          align: d.align,
+          valign: "top",
+          margin: 0,
+        });
+      }
+    } catch (err) {
+      // Fallback: never worse than today — full-bleed screenshot with text.
+      // The hybrid (editable-text) path degraded for this slide; surface why.
+      console.warn(`[exportDeckPptx] slide ${i + 1} hybrid path failed; falling back to flat image:`, err);
+      const blob = await renderSlideToBlob(slides[i]);
+      const dataUrl = await blobToDataUrl(blob);
+      s.addImage({ data: dataUrl, x: 0, y: 0, w: "100%", h: "100%" });
+    }
     if (slides[i].notes) s.addNotes(slides[i].notes);
   }
   await pptx.writeFile({ fileName: `${basename}-${Date.now()}.pptx` });
