@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>设计评审报告 · 定价页</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{font-family:'Noto Sans SC',system-ui,sans-serif;background:#fafafa;color:#0a0a0a}</style>
+</head>
+<body class="p-8">
+  <header class="mb-6">
+    <p class="text-sm tracking-widest text-neutral-500">设计评审报告</p>
+    <h1 class="text-2xl font-bold">SaaS 定价页 · 总评 52 / 100</h1>
+    <p class="text-neutral-600">一句话: 信息结构清楚, 但配色与文案有明显 AI slop 痕迹, 对比偏弱。</p>
+  </header>
+  <section class="mb-6 flex flex-wrap items-center gap-8 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <svg viewBox="0 0 220 220" class="h-56 w-56">
+      <polygon points="110,20 199,84 165,189 55,189 21,84" fill="none" stroke="#e5e7eb" />
+      <polygon points="110,47 163,94 129,138 80,153 74,100" fill="#3f5e3a33" stroke="#3f5e3a" stroke-width="2" />
+      <text x="110" y="14" text-anchor="middle" font-size="10">层级 70</text>
+      <text x="205" y="86" font-size="10">排版 60</text>
+      <text x="165" y="205" text-anchor="middle" font-size="10">色彩 35</text>
+      <text x="55" y="205" text-anchor="middle" font-size="10">留白 55</text>
+      <text x="2" y="86" font-size="10">内容 40</text>
+    </svg>
+    <div class="space-y-2 text-sm">
+      <div><span class="inline-block w-28">视觉层级</span><span class="font-bold text-[#3f5e3a]">70</span> — 三档结构清楚, 但价格与单位同字号削弱重点。</div>
+      <div><span class="inline-block w-28">排版</span><span class="font-bold">60</span> — 字阶单一, 缺正文层级。</div>
+      <div><span class="inline-block w-28">色彩与对比</span><span class="font-bold text-red-600">35</span> — 紫蓝渐变 + 浅灰边框, 对比 &lt;4.5。</div>
+      <div><span class="inline-block w-28">留白与网格</span><span class="font-bold">55</span> — 卡片内边距不齐 8px 节奏。</div>
+      <div><span class="inline-block w-28">内容真实性</span><span class="font-bold text-red-600">40</span> — lorem ipsum + 无真实用量数据。</div>
+    </div>
+  </section>
+  <section class="grid gap-4 md:grid-cols-3">
+    <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <h3 class="mb-2 font-bold text-[#3f5e3a]">✅ Keep</h3>
+      <ul class="list-disc space-y-1 pl-4 text-sm text-neutral-700">
+        <li>三档定价结构清晰易扫读。(视觉层级)</li>
+        <li>响应式卡片栅格基础稳。(留白与网格)</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <h3 class="mb-2 font-bold text-red-600">🛠 Fix</h3>
+      <ul class="list-disc space-y-1 pl-4 text-sm text-neutral-700">
+        <li>换掉紫蓝渐变, 用单一品牌主色 + 中性底。(色彩与对比)</li>
+        <li>lorem ipsum 全部换成真实卖点文案。(内容真实性)</li>
+        <li>价格数字放大, 「/月」缩小弱化。(视觉层级)</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+      <h3 class="mb-2 font-bold text-amber-600">⚡ Quick Wins</h3>
+      <ul class="list-disc space-y-1 pl-4 text-sm text-neutral-700">
+        <li>去掉功能点前的 emoji, 改用统一 SVG 勾。(排版)</li>
+        <li>主按钮描边加深到对比 ≥4.5。(色彩与对比)</li>
+        <li>给推荐档加一条主色顶边突出。(视觉层级)</li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>
