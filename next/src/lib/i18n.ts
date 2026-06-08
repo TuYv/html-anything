@@ -220,6 +220,10 @@ export interface Dict {
   "preview.refresh": string;
   "preview.refreshTooltip": string;
 
+  // Artifacts
+  "artifacts.section": string;
+  "artifacts.download": string;
+
   // Tasks sidebar
   "tasks.heading": string;
   "tasks.expand": string;
@@ -577,6 +581,9 @@ const en: Dict = {
   "preview.presentTooltip": "Fullscreen preview — F to toggle, ESC to exit",
   "preview.refresh": "Refresh",
   "preview.refreshTooltip": "Re-render the preview iframe with the current HTML",
+
+  "artifacts.section": "Artifacts",
+  "artifacts.download": "Download",
 
   "deck.empty": "No slides found in this output.",
   "deck.prev": "Previous slide",
@@ -936,6 +943,9 @@ const zhCN: Dict = {
   "preview.presentTooltip": "全屏预览 — F 切换 / ESC 退出",
   "preview.refresh": "刷新",
   "preview.refreshTooltip": "用当前 HTML 重新渲染预览 iframe",
+
+  "artifacts.section": "产物",
+  "artifacts.download": "下载",
 
   "deck.empty": "本次结果里没有检测到幻灯片。",
   "deck.prev": "上一页",
