@@ -22,11 +22,16 @@ example_tagline: "一段内容 → 一支 MP4"
 - 真实内容, 不 lorem; 遵守上面的设计纪律 (主色克制、8px、对比度 ≥4.5)。
 - 给每个场景标注时长 (如 data-dur-ms), 或在渲染脚本里写死时间线, 方便逐帧抓取。
 
+【转场与调色 (进阶, 提升质感)】
+- 转场: 除 fade/slide 外, 可用 CSS 做 wipe / mask reveal / scale-in / 数字递增等; 全片转场风格统一, 单次 0.3-0.6s, 不要每屏换花样。
+- 调色: 渲染后可用 ffmpeg 统一调色给整片定调 (如 `eq=contrast=1.05:saturation=1.05`, 或 `curves` / 套 LUT `lut3d=<file>.cube`); 冷暖与主色一致, 别过度。
+
 【渲染管线】
 - 总时长建议 8-20s (随内容多少), 30fps。
 - playwright 无头载入 HTML, 按时间线逐帧 screenshot 到临时帧目录 (放 cwd 根, 不进 out/)。
 - ffmpeg 合成 `out/<slug>.mp4` (`-r 30 -pix_fmt yuv420p`); slug 用内容主题。
 - 可选再导 `out/<slug>.gif` (前 ~6s, palettegen/paletteuse 优化)。
+- BGM (可选): 用户提供了背景音乐 (自带文件 / 指明免版税来源) 时, 用 ffmpeg 混入一轨 (压到 -18~-12dB, `-shortest`)。**不要**自行下载来路不明 / 版权不清的音频。
 - 渲染完清理临时帧/脚本。
 
 【交付】

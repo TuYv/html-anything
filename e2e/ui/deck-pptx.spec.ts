@@ -10,7 +10,7 @@ const deckHtml = `<!doctype html>
   <body>
     <section class="slide" data-slide-id="1">
       <h1>First Slide Title</h1>
-      <p>Hello editable world</p>
+      <p><em>Hello</em> <strong>editable</strong> world</p>
     </section>
     <section class="slide" data-slide-id="2">
       <h1>Second Slide Title</h1>
@@ -95,7 +95,14 @@ test.describe("Deck → editable PPTX", () => {
 
     const slide1 = await zip.file("ppt/slides/slide1.xml")!.async("string");
     expect(slide1).toContain("First Slide Title");
-    expect(slide1).toContain("Hello editable world");
+    expect(slide1).toContain("Hello");
+    expect(slide1).toContain("editable");
+    expect(slide1).toContain("world");
+    // run-level bold: pptxgenjs encodes bold runs as <a:rPr ... b="1"
+    expect(slide1).toMatch(/<a:rPr[^>]*\bb="1"/);
+    // whitespace between differently-styled spans must survive, not merge words
+    const slide1Texts = [...slide1.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]).join("");
+    expect(slide1Texts).toContain("Hello editable world");
 
     // PptxGenJS names media files as image-{slideN}-{imgN}.png (e.g. image-1-1.png).
     expect(names.some((n) => /^ppt\/media\/image[\d-]+\.(png|jpe?g)$/i.test(n))).toBe(true);

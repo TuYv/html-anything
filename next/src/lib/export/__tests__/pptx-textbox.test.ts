@@ -10,6 +10,9 @@ import {
   hasDirectText,
   collectTextElements,
   stripTextForBackground,
+  styleToRun,
+  mergeRuns,
+  type RunDescriptor,
 } from "../pptx-textbox";
 
 describe("pptx-textbox 纯映射", () => {
@@ -108,5 +111,25 @@ describe("pptx-textbox DOM 提取（happy-dom）", () => {
     expect(el.style.getPropertyPriority("color")).toBe("important");
     expect(el.style.getPropertyPriority("-webkit-text-fill-color")).toBe("important");
     expect(el.style.getPropertyPriority("text-shadow")).toBe("important");
+  });
+});
+
+describe("run-level styling", () => {
+  it("styleToRun maps per-run bold/italic/color/size", () => {
+    expect(styleToRun("hi", { fontWeight: "700", fontStyle: "italic", color: "rgb(10,10,10)", fontSize: "48px" })).toEqual({
+      text: "hi", bold: true, italic: true, colorHex: "0A0A0A", fontSizePt: 24,
+    });
+  });
+  it("mergeRuns merges adjacent same-style runs and drops empties", () => {
+    const runs: RunDescriptor[] = [
+      { text: "a", bold: false, italic: false, colorHex: "000000", fontSizePt: 12 },
+      { text: "b", bold: false, italic: false, colorHex: "000000", fontSizePt: 12 },
+      { text: "", bold: true, italic: false, colorHex: "000000", fontSizePt: 12 },
+      { text: "c", bold: true, italic: false, colorHex: "000000", fontSizePt: 12 },
+    ];
+    expect(mergeRuns(runs)).toEqual([
+      { text: "ab", bold: false, italic: false, colorHex: "000000", fontSizePt: 12 },
+      { text: "c", bold: true, italic: false, colorHex: "000000", fontSizePt: 12 },
+    ]);
   });
 });
