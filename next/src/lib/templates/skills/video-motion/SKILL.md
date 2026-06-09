@@ -31,7 +31,7 @@ example_tagline: "一段内容 → 一支 MP4"
 - playwright 无头载入 HTML, 按时间线逐帧 screenshot 到临时帧目录 (放 cwd 根, 不进 out/)。
 - ffmpeg 合成 `out/<slug>.mp4` (`-r 30 -pix_fmt yuv420p`); slug 用内容主题。
 - 可选再导 `out/<slug>.gif` (前 ~6s, palettegen/paletteuse 优化)。
-- BGM (可选): 用户提供了背景音乐 (自带文件 / 指明免版税来源) 时, 用 ffmpeg 混入一轨 (压到 -18~-12dB, `-shortest`)。**不要**自行下载来路不明 / 版权不清的音频。
+- BGM / SFX (可选): 内置曲库在 `$HTML_ANYTHING_AUDIO_DIR` 下 —— `bgm/` 6 首 (ad / educational(-alt) / tech / tutorial(-alt)), `sfx/` 分类音效 (transition / feedback / impact / ui / keyboard / magic ...)。选一首调性匹配的 BGM 用 ffmpeg 混入 (压到 -18~-12dB, `-shortest`); 关键节点可点缀 SFX。也可用用户自带音频。**不要**下载来路不明 / 版权不清的音频。
 - 渲染完清理临时帧/脚本。
 
 【交付】
