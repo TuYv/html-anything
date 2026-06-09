@@ -15,6 +15,12 @@ export type InvokeOpts = {
    * whose CLI lives outside the heuristic toolchain dirs.
    */
   binOverride?: string;
+  /**
+   * Extra env vars merged into the spawned agent's process env (after
+   * `envFor`). Used to pass per-task secrets (e.g. TTS_API_KEY) to the local
+   * agent process ONLY — never into the prompt. Scoped to this one spawn.
+   */
+  extraEnv?: Record<string, string>;
 };
 
 type BinResolution =
@@ -99,7 +105,7 @@ export function invokeAgent(opts: InvokeOpts): ReadableStream<InvokeEvent> {
   // For openclaw we need an async detection step (resolveOpenclawAgentId)
   // before buildArgv. Do all of the argv assembly inside the stream's async
   // start so we can `await` and surface failures as `error` events.
-  const env = envFor(opts.agent);
+  const env = { ...envFor(opts.agent), ...(opts.extraEnv ?? {}) };
   const promptViaArgv = def.protocol === "argv";
   const promptViaMessageFlag = def.protocol === "argv-message";
 
