@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>研发节奏变化 · 传统模式 vs Agents Team</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:ital,wght@0,600;1,600&family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f7f5ee;
+    --ink: #191a16;
+    --muted: #62665a;
+    --faint: #93978a;
+    --line: rgba(25, 26, 22, 0.16);
+    --hair: rgba(25, 26, 22, 0.08);
+    --old: #a56d3e;
+    --agent: #0f766e;
+    --owner: #23518f;
+    --token: #b45309;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #11120f; }
+  body {
+    font-family: "IBM Plex Sans", "Noto Sans SC", system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .slide {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 1920px;
+    height: 1080px;
+    transform-origin: center center;
+    transform: translate(-50%, -50%) scale(min(100vw / 1920px, 100vh / 1080px));
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(25,26,22,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(25,26,22,0.035) 1px, transparent 1px),
+      radial-gradient(circle at 93% 13%, rgba(15,118,110,0.10), transparent 32%),
+      var(--paper);
+    background-size: 48px 48px, 48px 48px, auto, auto;
+    padding: 74px 92px 60px;
+  }
+  .slide.is-active { opacity: 1; pointer-events: auto; }
+
+  .serif { font-family: "Source Serif Pro", Georgia, "Noto Sans SC", serif; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  header {
+    display: grid;
+    grid-template-columns: 1fr 410px;
+    gap: 64px;
+    align-items: end;
+  }
+  .kicker {
+    color: var(--agent);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 12px 0 0;
+    font-size: 76px;
+    line-height: 0.96;
+    letter-spacing: 0;
+    font-weight: 900;
+  }
+  .lead {
+    margin: 19px 0 0;
+    max-width: 1120px;
+    color: var(--muted);
+    font-size: 21px;
+    line-height: 1.44;
+    font-weight: 500;
+  }
+  .meta {
+    border-left: 3px solid var(--agent);
+    padding-left: 22px;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.75;
+  }
+  .meta b { color: var(--ink); font-weight: 800; }
+
+  .chart {
+    margin-top: 36px;
+    position: relative;
+    width: 100%;
+    height: 690px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  svg { width: 100%; height: 100%; display: block; }
+  .axis { stroke: var(--line); stroke-width: 1; }
+  .grid { stroke: var(--hair); stroke-width: 1; }
+  .label { fill: var(--muted); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; font-weight: 600; }
+  .small { fill: var(--faint); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+  .rowtitle { fill: var(--ink); font-size: 26px; font-weight: 900; }
+  .rowdesc { fill: var(--muted); font-size: 15px; font-weight: 500; }
+  .segtext { fill: var(--ink); font-size: 14px; font-weight: 800; }
+  .segsub { fill: var(--muted); font-size: 12px; font-weight: 600; }
+  .oldbar { fill: rgba(165,109,62,0.18); stroke: rgba(165,109,62,0.46); stroke-width: 1.4; }
+  .agentbar { fill: rgba(15,118,110,0.16); stroke: rgba(15,118,110,0.48); stroke-width: 1.4; }
+  .ownerbar { fill: rgba(35,81,143,0.12); stroke: rgba(35,81,143,0.45); stroke-width: 1.4; }
+  .darkbar { fill: var(--agent); stroke: var(--agent); }
+  .white { fill: #fff; }
+  .oldfill { fill: var(--old); }
+  .agentfill { fill: var(--agent); }
+  .ownerfill { fill: var(--owner); }
+  .tokenfill { fill: var(--token); }
+  .annot {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 15px;
+    font-weight: 800;
+    fill: var(--ink);
+  }
+  .annot-muted {
+    font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    fill: var(--muted);
+  }
+  .big {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 52px;
+    font-weight: 800;
+    fill: var(--ink);
+  }
+  .delta {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 22px;
+    font-weight: 800;
+    fill: var(--agent);
+  }
+  .callout {
+    fill: rgba(255,253,248,0.82);
+    stroke: var(--line);
+    stroke-width: 1.2;
+  }
+  .flowline {
+    fill: none;
+    stroke: rgba(25,26,22,0.38);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+  .saved {
+    fill: rgba(15,118,110,0.06);
+    stroke: rgba(15,118,110,0.55);
+    stroke-width: 2;
+    stroke-dasharray: 8 7;
+  }
+
+  footer {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    color: var(--faint);
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .draw {
+      stroke-dasharray: 1200;
+      stroke-dashoffset: 1200;
+      animation: draw 1.2s ease-out 0.2s forwards;
+    }
+    .fade {
+      opacity: 0;
+      animation: fade 0.5s ease-out forwards;
+    }
+    .d1 { animation-delay: 0.18s; }
+    .d2 { animation-delay: 0.28s; }
+    .d3 { animation-delay: 0.38s; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @keyframes fade { to { opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+<section class="slide is-active" data-slide-id="1">
+  <header>
+    <div>
+      <div class="kicker">R&D rhythm · One chart · PRD to release</div>
+      <h1>同等需求下，<span class="serif" style="color:var(--agent);font-style:italic">Agents Team</span><br/>把研发节奏从串行压成并行</h1>
+      <p class="lead">传统模式按人力顺序接力；Agents Team 由人类 owner 先定目标、边界和验收，再让后端、前端 agent 把模块拆分、编码、单测、联调、自测 / 修 bug 内化压缩，之后才进入人类最终 CR、测试和上线。</p>
+    </div>
+    <div class="meta mono">
+      Example: <b>一周开发量需求</b><br/>
+      Baseline: <b>17 PD / 10d</b><br/>
+      Agents Team: <b>6.5 PD / 6.5d</b>
+    </div>
+  </header>
+
+  <div class="chart">
+    <svg viewBox="0 0 1736 690" role="img" aria-label="传统研发节奏和 Agents Team 研发节奏对比图">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(25,26,22,0.45)"></path>
+        </marker>
+      </defs>
+
+      <!-- Chart geometry: left label 210, chart 1180, right callout 320 -->
+      <g transform="translate(210,70)">
+        <!-- vertical grid and axis -->
+        <line class="axis" x1="0" y1="0" x2="1180" y2="0"></line>
+        <line class="axis" x1="0" y1="500" x2="1180" y2="500"></line>
+        <g class="mono">
+          <line class="grid" x1="0" y1="0" x2="0" y2="500"></line>
+          <line class="grid" x1="139" y1="0" x2="139" y2="500"></line>
+          <line class="grid" x1="278" y1="0" x2="278" y2="500"></line>
+          <line class="grid" x1="417" y1="0" x2="417" y2="500"></line>
+          <line class="grid" x1="556" y1="0" x2="556" y2="500"></line>
+          <line class="grid" x1="694" y1="0" x2="694" y2="500"></line>
+          <line class="grid" x1="833" y1="0" x2="833" y2="500"></line>
+          <line class="grid" x1="972" y1="0" x2="972" y2="500"></line>
+          <line class="grid" x1="1111" y1="0" x2="1111" y2="500"></line>
+          <text class="label" x="0" y="-18">0</text>
+          <text class="label" x="139" y="-18">2</text>
+          <text class="label" x="278" y="-18">4</text>
+          <text class="label" x="417" y="-18">6</text>
+          <text class="label" x="556" y="-18">8</text>
+          <text class="label" x="694" y="-18">10</text>
+          <text class="label" x="833" y="-18">12</text>
+          <text class="label" x="972" y="-18">14</text>
+          <text class="label" x="1111" y="-18">16</text>
+          <text class="small" x="1056" y="-43">PERSON-DAYS →</text>
+        </g>
+      </g>
+
+      <!-- Left labels -->
+      <g class="fade d1">
+        <rect x="0" y="122" width="118" height="26" rx="13" fill="rgba(165,109,62,0.13)" stroke="rgba(165,109,62,0.30)"></rect>
+        <text x="15" y="141" class="small" fill="var(--old)">TRADITIONAL</text>
+        <text x="0" y="185" class="rowtitle">人力串行</text>
+        <text x="0" y="213" class="rowdesc">一个阶段结束，</text>
+        <text x="0" y="235" class="rowdesc">下个阶段才能接上。</text>
+      </g>
+      <g class="fade d2">
+        <rect x="0" y="350" width="126" height="26" rx="13" fill="rgba(15,118,110,0.12)" stroke="rgba(15,118,110,0.30)"></rect>
+        <text x="15" y="369" class="small" fill="var(--agent)">AGENTS TEAM</text>
+        <text x="0" y="414" class="rowtitle">并行工作网</text>
+        <text x="0" y="442" class="rowdesc">Owner 调度多 agent，</text>
+        <text x="0" y="464" class="rowdesc">最后人工收敛把关。</text>
+      </g>
+
+      <!-- Traditional sequence: width follows actual PD on a 0-17 PD scale -->
+      <g class="fade d1">
+        <!-- Agent internalization brace under the traditional work it replaces -->
+        <path d="M 210 276 C 210 288, 222 288, 222 288 L 1169 288 C 1181 288, 1181 276, 1181 276"
+          fill="none" stroke="rgba(15,118,110,0.72)" stroke-width="3" stroke-linecap="round"></path>
+        <text class="small" x="538" y="311" fill="var(--agent)">后端 / 前端 Agent 内化这一段: 拆分、编码、单测、联调、自测修复 → 1PD</text>
+
+        <path class="flowline" marker-end="url(#arrow)" d="M 244 216 C 388 216, 388 216, 928 216"></path>
+        <path class="flowline" marker-end="url(#arrow)" d="M 950 216 C 1012 216, 1012 216, 1034 216"></path>
+        <path class="flowline" marker-end="url(#arrow)" d="M 1054 216 C 1142 216, 1142 216, 1174 216"></path>
+        <path class="flowline" marker-end="url(#arrow)" d="M 1190 216 C 1210 216, 1210 216, 1214 216"></path>
+        <path class="flowline" marker-end="url(#arrow)" d="M 1232 216 C 1306 216, 1306 216, 1384 216"></path>
+
+        <rect class="oldbar" x="210" y="155" width="35" height="84" rx="7"></rect>
+        <text class="segtext" x="223" y="151" text-anchor="middle">拆分</text>
+        <text class="segsub" x="223" y="255" text-anchor="middle">0.5</text>
+
+        <rect class="oldbar" x="245" y="155" width="694" height="84" rx="7"></rect>
+        <text class="segtext" x="263" y="186">前后端开发</text>
+        <text class="segsub" x="263" y="211">FE 5PD + BE 5PD · 单测内含</text>
+
+        <rect class="oldbar" x="939" y="155" width="104" height="84" rx="7"></rect>
+        <text class="segtext" x="955" y="186">联调</text>
+        <text class="segsub" x="955" y="211">1.5 PD</text>
+
+        <rect class="oldbar" x="1043" y="155" width="139" height="84" rx="7"></rect>
+        <text class="segtext" x="1059" y="186">自测 / 修 bug</text>
+        <text class="segsub" x="1059" y="211">2 PD</text>
+
+        <rect class="oldbar" x="1182" y="155" width="35" height="84" rx="7"></rect>
+        <text class="segtext" x="1199" y="151" text-anchor="middle">CR</text>
+        <text class="segsub" x="1199" y="255" text-anchor="middle">0.5</text>
+
+        <rect class="ownerbar" x="1217" y="155" width="174" height="84" rx="7"></rect>
+        <text class="segtext" x="1233" y="186">测试</text>
+        <text class="segsub" x="1233" y="211">2.5 PD</text>
+
+      </g>
+
+      <!-- Agents Team sequence: width follows actual PD on the same scale -->
+      <g class="fade d2">
+        <path class="flowline" marker-end="url(#arrow)" d="M 278 413 C 300 413, 300 413, 322 413"></path>
+        <path class="flowline" marker-end="url(#arrow)" d="M 348 413 C 420 413, 420 413, 486 413"></path>
+        <path class="flowline" marker-end="url(#arrow)" d="M 506 413 C 596 413, 596 413, 658 413"></path>
+        <path class="flowline" marker-end="url(#arrow)" d="M 678 413 C 702 413, 702 413, 734 413"></path>
+
+        <rect class="ownerbar" x="210" y="370" width="69" height="86" rx="7"></rect>
+        <text class="segtext" x="225" y="401">方案</text>
+        <text class="segsub" x="225" y="426">1PD</text>
+
+        <rect class="agentbar" x="279" y="370" width="69" height="86" rx="7"></rect>
+        <text class="segtext" x="291" y="398">FE/BE</text>
+        <text class="segtext" x="291" y="418">Agent</text>
+        <text class="segsub" x="291" y="443">1PD</text>
+
+        <rect class="ownerbar" x="348" y="370" width="139" height="86" rx="7"></rect>
+        <text class="segtext" x="366" y="401">人类 CR</text>
+        <text class="segsub" x="366" y="426">2 PD</text>
+
+        <rect class="ownerbar" x="487" y="370" width="174" height="86" rx="7"></rect>
+        <text class="segtext" x="505" y="401">测试</text>
+        <text class="segsub" x="505" y="426">2.5 PD</text>
+
+        <!-- 上线 is a release milestone, NOT counted in PD: a zero-width marker at the 6.5PD endpoint (x=661), so the scaled bar ends at 测试 and the Agents total stays 6.5 PD per the 17→6.5 KPI. -->
+        <rect class="ownerbar" x="658" y="370" width="6" height="86" rx="3"></rect>
+        <text class="segtext" x="674" y="401">上线</text>
+        <text class="segsub" x="674" y="426">发布 · 0 PD</text>
+
+        <path d="M 314 348 C 314 326, 314 308, 314 288" fill="none" stroke="rgba(15,118,110,0.45)" stroke-width="2" stroke-dasharray="7 7"></path>
+        <text class="small" x="232" y="555" fill="var(--agent)">SAME PD SCALE: 方案 1PD → Agent 1PD → Human CR 2PD → Test 2.5PD → Release</text>
+      </g>
+
+      <!-- Saved window bracket -->
+      <g class="fade d3">
+        <rect class="saved" x="720" y="342" width="671" height="142" rx="10"></rect>
+        <text class="annot" x="950" y="405" fill="var(--agent)">释放 10.5 PD</text>
+        <text class="annot-muted" x="903" y="433">前置研发被 Agent 压缩成 1PD</text>
+      </g>
+
+      <!-- Right KPI callouts -->
+      <g class="fade d3">
+        <rect class="callout" x="1410" y="88" width="318" height="492" rx="8"></rect>
+        <text class="small" x="1434" y="124">EFFICIENCY LIFT</text>
+
+        <text class="annot-muted" x="1434" y="164">单需求人日</text>
+        <text class="big" x="1434" y="218">17→6.5</text>
+        <text class="delta" x="1438" y="250">约 -62% PD</text>
+
+        <line x1="1434" y1="282" x2="1704" y2="282" class="axis"></line>
+
+        <text class="annot-muted" x="1434" y="322">研发周期</text>
+        <text class="big" x="1434" y="376">10→6.5</text>
+        <text class="delta" x="1438" y="408">按一周开发量口径</text>
+
+        <line x1="1434" y1="440" x2="1704" y2="440" class="axis"></line>
+
+        <text class="annot-muted" x="1434" y="478">Token 变量成本</text>
+        <text class="big tokenfill" x="1434" y="532">~¥2k</text>
+        <text class="annot-muted" x="1438" y="558">2kw Token · Opus 4.7 粗估</text>
+      </g>
+
+      <!-- Bottom scale captions -->
+      <g class="fade d2">
+        <text class="small" x="210" y="626">传统: FE 5PD + BE 5PD, 单测算在编码内 · 联调 / 自测修复 / CR / 测试继续串行</text>
+        <text class="small" x="820" y="626">Agents Team: 方案 1PD · 前后端 agent 合计 1PD · 人工 CR 2PD · 测试 2.5PD</text>
+      </g>
+    </svg>
+  </div>
+
+  <footer class="mono">
+    <span>Template references: deck-open-slide-canvas · frame-data-chart-nyt · frame-flowchart-sticky</span>
+    <span>Example: one-week development workload · deployment excluded from effort</span>
+  </footer>
+</section>
+</body>
+</html>
