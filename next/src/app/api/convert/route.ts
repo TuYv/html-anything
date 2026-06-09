@@ -3,6 +3,7 @@ import { invokeAgent } from "@/lib/agents/invoke";
 import { loadSkill } from "@/lib/templates/loader";
 import { assembleForSkill } from "@/lib/templates/shared";
 import { ensureWorkdir, sanitizeTaskId } from "@/lib/artifacts/workdir";
+import { readTtsConfig, ttsEnvForSkill } from "@/lib/tts/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -120,11 +121,14 @@ export async function POST(req: NextRequest) {
   const abortCtl = new AbortController();
   req.signal?.addEventListener("abort", () => abortCtl.abort(), { once: true });
 
+  const extraEnv = ttsEnvForSkill(skill.scenario, await readTtsConfig());
+
   const stream = invokeAgent({
     agent,
     prompt,
     model,
     cwd: workdirCwd,
+    extraEnv,
     binOverride,
     signal: abortCtl.signal,
   });

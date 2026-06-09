@@ -220,6 +220,16 @@ export interface Dict {
   "preview.refresh": string;
   "preview.refreshTooltip": string;
 
+  // TTS voiceover
+  "tts.section": string;
+  "tts.endpoint": string;
+  "tts.apiKey": string;
+  "tts.model": string;
+  "tts.voice": string;
+  "tts.save": string;
+  "tts.clear": string;
+  "tts.hint": string;
+
   // Tools / local toolchain
   "tools.section": string;
   "tools.videoMissing": string;
@@ -586,6 +596,15 @@ const en: Dict = {
   "preview.refresh": "Refresh",
   "preview.refreshTooltip": "Re-render the preview iframe with the current HTML",
 
+  "tts.section": "TTS voiceover",
+  "tts.endpoint": "TTS endpoint (OpenAI-compatible)",
+  "tts.apiKey": "API key",
+  "tts.model": "Model (optional)",
+  "tts.voice": "Voice (optional)",
+  "tts.save": "Save",
+  "tts.clear": "Clear",
+  "tts.hint": "Stored locally (chmod 600); used only by video skills.",
+
   "tools.section": "Local toolchain",
   "tools.videoMissing": "Video rendering needs {tools}; not found on this machine — output may fail.",
 
@@ -950,6 +969,15 @@ const zhCN: Dict = {
   "preview.presentTooltip": "全屏预览 — F 切换 / ESC 退出",
   "preview.refresh": "刷新",
   "preview.refreshTooltip": "用当前 HTML 重新渲染预览 iframe",
+
+  "tts.section": "TTS 配音",
+  "tts.endpoint": "TTS 接口地址 (OpenAI 兼容)",
+  "tts.apiKey": "API 密钥",
+  "tts.model": "模型 (可选)",
+  "tts.voice": "音色 (可选)",
+  "tts.save": "保存",
+  "tts.clear": "清除",
+  "tts.hint": "仅本地保存 (chmod 600); 只在视频 skill 渲染时使用。",
 
   "tools.section": "本地工具链",
   "tools.videoMissing": "视频渲染需要 {tools}，本机未检测到——产物可能生成失败。",
