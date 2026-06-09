@@ -22,12 +22,22 @@ export type PptxTextProps = {
   align: "left" | "center" | "right";
 };
 
-export type TextBoxDescriptor = PptxTextProps & {
+export type RunDescriptor = {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+  colorHex: string;
+  fontSizePt: number;
+};
+
+export type TextBoxDescriptor = {
   xIn: number;
   yIn: number;
   wIn: number;
   hIn: number;
-  text: string;
+  align: "left" | "center" | "right";
+  fontFace: string;
+  runs: RunDescriptor[];
 };
 
 /** Snapshot of the computed-style fields we read — keeps mappers DOM-free. */
@@ -135,30 +145,94 @@ export function stripTextForBackground(els: HTMLElement[]): void {
   }
 }
 
+/** Build one RunDescriptor from a per-run style snapshot (pure, testable). */
+export function styleToRun(
+  text: string,
+  s: { fontWeight: string; fontStyle: string; color: string; fontSize: string },
+  pxPerInch = PX_PER_INCH,
+): RunDescriptor {
+  return {
+    text,
+    bold: fontWeightToBold(s.fontWeight),
+    italic: s.fontStyle === "italic" || s.fontStyle === "oblique",
+    colorHex: cssColorToHex(s.color),
+    fontSizePt: pxToPt(parseFloat(s.fontSize) || 0, pxPerInch),
+  };
+}
+
+/** Merge adjacent runs with identical style; drop empty-text runs (pure, testable). */
+export function mergeRuns(runs: RunDescriptor[]): RunDescriptor[] {
+  const out: RunDescriptor[] = [];
+  for (const r of runs) {
+    if (!r.text) continue;
+    const last = out[out.length - 1];
+    if (
+      last &&
+      last.bold === r.bold &&
+      last.italic === r.italic &&
+      last.colorHex === r.colorHex &&
+      last.fontSizePt === r.fontSizePt
+    ) {
+      last.text += r.text;
+    } else {
+      out.push({ ...r });
+    }
+  }
+  return out;
+}
+
+/** Walk a block's text nodes into style-distinct runs (browser-only: reads getComputedStyle). */
+export function elementToRuns(el: HTMLElement, win: Window): RunDescriptor[] {
+  const runs: RunDescriptor[] = [];
+  const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let node: Node | null = walker.nextNode();
+  while (node) {
+    const text = (node.textContent ?? "").replace(/\s+/g, " ");
+    if (text) {
+      if (!text.trim()) {
+        // whitespace-only node between spans: attach to the previous run so words don't merge
+        if (runs.length) runs[runs.length - 1].text += " ";
+      } else {
+        const parent = (node.parentElement ?? el) as HTMLElement;
+        const cs = win.getComputedStyle(parent);
+        runs.push(
+          styleToRun(text, {
+            fontWeight: cs.fontWeight,
+            fontStyle: cs.fontStyle,
+            color: cs.color,
+            fontSize: cs.fontSize,
+          }),
+        );
+      }
+    }
+    node = walker.nextNode();
+  }
+  // trim leading/trailing whitespace on the merged result
+  const merged = mergeRuns(runs);
+  if (merged.length) {
+    merged[0].text = merged[0].text.replace(/^\s+/, "");
+    merged[merged.length - 1].text = merged[merged.length - 1].text.replace(/\s+$/, "");
+  }
+  return merged.filter((r) => r.text.length > 0);
+}
+
 /** Read live layout + computed style into editable text-box descriptors. */
 export function elementsToTextBoxes(els: HTMLElement[], win: Window): TextBoxDescriptor[] {
   const out: TextBoxDescriptor[] = [];
   for (const el of els) {
     const rect = el.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) continue;
-    const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
-    if (!text) continue;
+    const runs = elementToRuns(el, win);
+    if (runs.length === 0) continue;
     const cs = win.getComputedStyle(el);
-    const props = cssToPptxTextProps({
-      fontFamily: cs.fontFamily,
-      fontSize: cs.fontSize,
-      fontWeight: cs.fontWeight,
-      fontStyle: cs.fontStyle,
-      color: cs.color,
-      textAlign: cs.textAlign,
-    });
     out.push({
       xIn: pxToInches(rect.left),
       yIn: pxToInches(rect.top),
       wIn: pxToInches(rect.width),
       hIn: pxToInches(rect.height),
-      text,
-      ...props,
+      align: textAlignToPptx(cs.textAlign),
+      fontFace: mapFontFamily(cs.fontFamily),
+      runs,
     });
   }
   return out;

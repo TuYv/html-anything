@@ -123,17 +123,13 @@ export async function exportDeckPptx(
       });
       s.addImage({ data: bgDataUrl, x: 0, y: 0, w: "100%", h: "100%" });
       for (const d of descriptors) {
-        s.addText(d.text, {
-          x: d.xIn, y: d.yIn, w: d.wIn, h: d.hIn,
-          fontFace: d.fontFace,
-          fontSize: d.fontSizePt,
-          color: d.colorHex,
-          bold: d.bold,
-          italic: d.italic,
-          align: d.align,
-          valign: "top",
-          margin: 0,
-        });
+        s.addText(
+          d.runs.map((r) => ({
+            text: r.text,
+            options: { bold: r.bold, italic: r.italic, color: r.colorHex, fontSize: r.fontSizePt },
+          })),
+          { x: d.xIn, y: d.yIn, w: d.wIn, h: d.hIn, fontFace: d.fontFace, align: d.align, valign: "top", margin: 0 },
+        );
       }
     } catch (err) {
       // Fallback: never worse than today — full-bleed screenshot with text.
