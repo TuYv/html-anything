@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { deleteTaskRuns, putRun } from "@/lib/history/db";
+import type { Artifact } from "@/lib/artifacts/discover";
 
 export type ModelOption = { id: string; label: string };
 
@@ -92,6 +93,8 @@ export type Task = {
    * which historical version of the HTML each public URL points to.
    */
   deployments?: DeploymentRecord[];
+  /** Files the agent wrote to its workdir's out/, discovered after `done`. */
+  artifacts?: Artifact[];
   // meta
   createdAt: number;
   updatedAt: number;
@@ -252,6 +255,8 @@ type State = {
   pushDeploymentFor: (taskId: string, deployment: DeploymentRecord) => void;
   /** delete a past deployment record (UI only; the public URL remains). */
   removeDeploymentFor: (taskId: string, deploymentRecordId: string) => void;
+  /** Store the artifact list discovered for a task after convert completes. */
+  setArtifactsFor: (taskId: string, artifacts: Artifact[]) => void;
 
   // global setters
   setAgents: (a: AgentInfo[]) => void;
@@ -302,6 +307,8 @@ export const useStore = create<State>()(
         return t.id;
       },
       deleteTask: (id) => {
+        // best-effort: drop the server-side artifact workdir for this task
+        void fetch(`/api/artifacts?task=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
         const { tasks, activeTaskId } = get();
         if (tasks.length <= 1) {
           // never leave 0 tasks — replace with a fresh empty one
@@ -468,6 +475,8 @@ export const useStore = create<State>()(
             ),
           })),
         })),
+      setArtifactsFor: (taskId, artifacts) =>
+        set((st) => ({ tasks: patchTask(st.tasks, taskId, { artifacts }) })),
 
       setAgents: (a) => set({ agents: a }),
       setSelectedAgent: (id) => set({ selectedAgent: id }),

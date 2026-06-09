@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useStore } from "./store";
 import { summarizeForAgent } from "./parsers/auto";
+import type { Artifact } from "@/lib/artifacts/discover";
 
 type ConvertReq = {
   taskId: string;
@@ -84,6 +85,7 @@ export function useConvert() {
         templateId: req.templateId,
         content: enrichedContent,
         format: req.format ?? summary.format,
+        taskId,
         ...(useModel ? { model: useModel } : {}),
         ...(binOverride ? { binOverride } : {}),
         ...(editPayload ?? {}),
@@ -148,6 +150,13 @@ export function useConvert() {
         // record the just-finished (content, html) as the new diff-edit baseline
         // so the user's next edit goes through diff mode instead of full regen
         useStore.getState().commitBaseFor(taskId);
+        // discover any files the agent wrote to its workdir's out/
+        void fetch(`/api/artifacts?task=${encodeURIComponent(taskId)}`)
+          .then((r) => (r.ok ? r.json() : { artifacts: [] }))
+          .then((j: { artifacts?: Artifact[] }) => {
+            useStore.getState().setArtifactsFor(taskId, j.artifacts ?? []);
+          })
+          .catch(() => {});
       } catch (err) {
         if ((err as Error)?.name === "AbortError") {
           useStore.getState().pushLogFor(taskId, { kind: "info", text: "已取消" });

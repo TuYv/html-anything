@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const webPort = Number(process.env.HTML_ANYTHING_E2E_PORT) || 3317;
 const baseURL = `http://127.0.0.1:${webPort}`;
@@ -33,6 +37,9 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    env: {
+      HTML_ANYTHING_WORK_ROOT: path.join(__dirname, ".artifacts-e2e"),
+    },
   },
   projects: [
     {

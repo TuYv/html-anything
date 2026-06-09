@@ -6,6 +6,7 @@ import { useT, type DictKey } from "@/lib/i18n";
 import { previewHtml, extractHtml } from "@/lib/extract-html";
 import { isDeck } from "@/lib/deck";
 import { DeckViewer } from "./deck-viewer";
+import { ArtifactCards } from "./artifact-cards";
 
 type PreviewTab = "preview" | "deck" | "code" | "log";
 
@@ -360,6 +361,7 @@ export function PreviewPane({
           </button>
         )}
       </div>
+      {!isFullscreen && <ArtifactCards />}
     </div>
   );
 }
