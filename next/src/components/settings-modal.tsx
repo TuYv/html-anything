@@ -10,6 +10,7 @@ import {
 } from "@/lib/store";
 import { useT, type DictKey } from "@/lib/i18n";
 import { refreshTemplates } from "@/lib/templates";
+import { ToolsStatus } from "./tools-status";
 
 type Props = { onClose: () => void; initialSection?: SectionId };
 
@@ -276,6 +277,10 @@ function AgentSection() {
           <p className="mt-2 text-xs text-[var(--ink-mute)]">{t("welcome.noAgentsBody")}</p>
         </div>
       )}
+
+      <div className="mt-6 pt-5" style={{ borderTop: "1px solid var(--line-faint)" }}>
+        <ToolsStatus />
+      </div>
     </div>
   );
 }

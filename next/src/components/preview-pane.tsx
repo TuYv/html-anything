@@ -7,6 +7,7 @@ import { previewHtml, extractHtml } from "@/lib/extract-html";
 import { isDeck } from "@/lib/deck";
 import { DeckViewer } from "./deck-viewer";
 import { ArtifactCards } from "./artifact-cards";
+import { VideoToolsBanner } from "./video-tools-banner";
 
 type PreviewTab = "preview" | "deck" | "code" | "log";
 
@@ -283,6 +284,7 @@ export function PreviewPane({
       )}
 
       {!isFullscreen && showMetrics && <MetricsBar stats={stats} status={status} html={html} />}
+      {!isFullscreen && <VideoToolsBanner />}
 
       <div className="relative flex-1 overflow-hidden">
         {tab === "preview" && (

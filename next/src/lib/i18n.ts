@@ -220,6 +220,10 @@ export interface Dict {
   "preview.refresh": string;
   "preview.refreshTooltip": string;
 
+  // Tools / local toolchain
+  "tools.section": string;
+  "tools.videoMissing": string;
+
   // Artifacts
   "artifacts.section": string;
   "artifacts.download": string;
@@ -582,6 +586,9 @@ const en: Dict = {
   "preview.refresh": "Refresh",
   "preview.refreshTooltip": "Re-render the preview iframe with the current HTML",
 
+  "tools.section": "Local toolchain",
+  "tools.videoMissing": "Video rendering needs {tools}; not found on this machine — output may fail.",
+
   "artifacts.section": "Artifacts",
   "artifacts.download": "Download",
 
@@ -943,6 +950,9 @@ const zhCN: Dict = {
   "preview.presentTooltip": "全屏预览 — F 切换 / ESC 退出",
   "preview.refresh": "刷新",
   "preview.refreshTooltip": "用当前 HTML 重新渲染预览 iframe",
+
+  "tools.section": "本地工具链",
+  "tools.videoMissing": "视频渲染需要 {tools}，本机未检测到——产物可能生成失败。",
 
   "artifacts.section": "产物",
   "artifacts.download": "下载",
