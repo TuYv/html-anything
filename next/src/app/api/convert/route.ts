@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { invokeAgent } from "@/lib/agents/invoke";
 import { loadSkill } from "@/lib/templates/loader";
-import { assemblePrompt } from "@/lib/templates/shared";
+import { assembleForSkill } from "@/lib/templates/shared";
 import { ensureWorkdir, sanitizeTaskId } from "@/lib/artifacts/workdir";
 
 export const runtime = "nodejs";
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       format,
     });
   } else {
-    prompt = assemblePrompt({ body: skill.body, content, format });
+    prompt = assembleForSkill(skill, content, format);
   }
   let safeId: string;
   try {
