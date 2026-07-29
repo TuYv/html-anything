@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { toWechatHtmlForExport, toWechatHtmlFromDocument } from "../wechat";
+import { renderToWechatHtml, toWechatHtmlFromDocument } from "../wechat";
 
 function parseFragment(html: string): HTMLBodyElement {
   return new DOMParser().parseFromString(`<body>${html}</body>`, "text/html")
@@ -211,18 +211,17 @@ describe("toWechatHtmlFromDocument", () => {
     expect(style).not.toContain("96px");
   });
 
-  it("keeps every deck slide when the selected iframe contains only one slide", () => {
-    const fullDeck = `<!doctype html><html><body>
-      <section class="slide" data-slide-id="1"><h1>Slide one</h1></section>
-      <section class="slide" data-slide-id="2"><h1>Slide two</h1></section>
+  it("keeps every runtime-styled deck slide in the full rendered export", async () => {
+    const fullDeck = `<!doctype html><html><head>
+      <style>.runtime { color: rgb(1, 2, 3); }</style>
+    </head><body>
+      <section class="slide runtime" data-slide-id="1"><h1>Slide one</h1></section>
+      <section class="slide runtime" data-slide-id="2"><h1>Slide two</h1></section>
     </body></html>`;
-    const selectedSlide = new DOMParser().parseFromString(
-      `<!doctype html><html><body><section class="slide"><h1>Slide two</h1></section></body></html>`,
-      "text/html",
-    );
 
-    const exported = toWechatHtmlForExport(fullDeck, selectedSlide);
+    const exported = await renderToWechatHtml(fullDeck);
     expect(exported).toContain("Slide one");
     expect(exported).toContain("Slide two");
+    expect(exported).toContain("color: rgb(1, 2, 3)");
   });
 });

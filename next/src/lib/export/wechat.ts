@@ -1,7 +1,6 @@
 "use client";
 
 import juice from "juice";
-import { isDeck } from "../deck";
 import { copyHtml } from "./clipboard";
 
 /**
@@ -106,16 +105,62 @@ export function toWechatHtmlFromDocument(renderedDoc: Document): string {
   return section.outerHTML;
 }
 
-export function toWechatHtmlForExport(
-  fullHtml: string,
-  renderedDoc?: Document | null,
- ): string {
-  if (isDeck(fullHtml)) return toWechatHtml(fullHtml);
-  return renderedDoc?.body ? toWechatHtmlFromDocument(renderedDoc) : toWechatHtml(fullHtml);
+/**
+ * Render the complete source document in an offscreen iframe for every
+ * toolbar WeChat export. This keeps Source/Log tabs and DeckViewer from
+ * silently switching the export to a partial or unrendered document.
+ */
+export async function renderToWechatHtml(fullHtml: string): Promise<string> {
+  if (typeof window === "undefined") return toWechatHtml(fullHtml);
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
+  iframe.style.cssText =
+    "position: fixed; left: -100000px; top: 0; width: 1280px; height: 960px; border: 0; visibility: hidden;";
+  iframe.srcdoc = fullHtml;
+  document.body.appendChild(iframe);
+
+  try {
+    await waitForIframeLoad(iframe);
+    const renderedDoc = iframe.contentDocument;
+    if (!renderedDoc?.body) return toWechatHtml(fullHtml);
+    await waitForDocumentReady(renderedDoc);
+    return toWechatHtmlFromDocument(renderedDoc);
+  } catch {
+    return toWechatHtml(fullHtml);
+  } finally {
+    iframe.remove();
+  }
 }
 
-export async function copyToWechat(fullHtml: string, renderedDoc?: Document | null): Promise<void> {
-  await copyHtml(toWechatHtmlForExport(fullHtml, renderedDoc));
+export async function copyToWechat(fullHtml: string): Promise<void> {
+  await copyHtml(await renderToWechatHtml(fullHtml));
+}
+
+function waitForIframeLoad(iframe: HTMLIFrameElement): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let timeout = 0;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      iframe.removeEventListener("load", finish);
+      resolve();
+    };
+    iframe.addEventListener("load", finish, { once: true });
+    timeout = window.setTimeout(finish, 8000);
+  });
+}
+
+async function waitForDocumentReady(doc: Document): Promise<void> {
+  try {
+    const fonts = (doc as Document & { fonts?: FontFaceSet }).fonts;
+    if (fonts?.ready) await fonts.ready;
+  } catch {
+    // Font loading is best effort; computed styles are still useful without it.
+  }
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 function inlineComputedTree(source: Element, clone: Element, view: Window): void {
