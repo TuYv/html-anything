@@ -187,6 +187,18 @@ describe("toWechatHtmlFromDocument", () => {
     }
   });
 
+  it("omits computed-hidden speaker notes", () => {
+    document.head.innerHTML = `<style>.notes { display: none !important; }</style>`;
+    document.body.innerHTML = `
+      <section class="slide"><h1>Visible slide</h1><aside class="notes">SECRET NOTES</aside></section>
+    `;
+
+    const exported = toWechatHtmlFromDocument(document);
+    expect(exported).toContain("Visible slide");
+    expect(exported).not.toContain("SECRET NOTES");
+    expect(exported).not.toContain("class=\"notes\"");
+  });
+
   it("clamps oversized spacing and drops negative margins", () => {
     document.head.innerHTML = `
       <style>

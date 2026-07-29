@@ -1,7 +1,7 @@
 "use client";
 
 import juice from "juice";
-import { copyHtml } from "./clipboard";
+import { copyHtmlWhenReady } from "./clipboard";
 
 /**
  * Clamp `margin` / `padding` to 48px. Poster- and deck-scale templates
@@ -89,6 +89,10 @@ export function toWechatHtmlFromDocument(renderedDoc: Document): string {
   const view = renderedDoc.defaultView ?? window;
   const wrap = document.createElement("div");
   for (const child of Array.from(body.childNodes)) {
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      const element = child as Element;
+      if (isComputedHidden(element, view)) continue;
+    }
     const clone = child.cloneNode(true);
     if (child.nodeType === Node.ELEMENT_NODE && clone.nodeType === Node.ELEMENT_NODE) {
       inlineComputedTree(child as Element, clone as Element, view);
@@ -116,7 +120,7 @@ export async function renderToWechatHtml(fullHtml: string): Promise<string> {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
   iframe.style.cssText =
-    "position: fixed; left: -100000px; top: 0; width: 1280px; height: 960px; border: 0; visibility: hidden;";
+    "position: fixed; left: 0; top: 0; width: 1280px; height: 960px; border: 0; opacity: 0; pointer-events: none; z-index: -2147483648;";
   iframe.srcdoc = fullHtml;
   document.body.appendChild(iframe);
 
@@ -134,7 +138,7 @@ export async function renderToWechatHtml(fullHtml: string): Promise<string> {
 }
 
 export async function copyToWechat(fullHtml: string): Promise<void> {
-  await copyHtml(await renderToWechatHtml(fullHtml));
+  await copyHtmlWhenReady(renderToWechatHtml(fullHtml));
 }
 
 function waitForIframeLoad(iframe: HTMLIFrameElement): Promise<void> {
@@ -160,10 +164,33 @@ async function waitForDocumentReady(doc: Document): Promise<void> {
   } catch {
     // Font loading is best effort; computed styles are still useful without it.
   }
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  const view = doc.defaultView ?? window;
+  await nextFrame(view);
+  await nextFrame(view);
+  await new Promise<void>((resolve) => view.setTimeout(resolve, 50));
+
+  for (const animation of doc.getAnimations?.() ?? []) {
+    try {
+      const timing = animation.effect?.getComputedTiming();
+      if (Number.isFinite(Number(timing?.endTime))) animation.finish();
+      animation.pause();
+    } catch {
+      // Infinite or script-controlled animations are sampled at their current state.
+    }
+  }
+  await nextFrame(view);
+}
+
+function nextFrame(view: Window): Promise<void> {
+  return new Promise((resolve) => view.requestAnimationFrame(() => resolve()));
 }
 
 function inlineComputedTree(source: Element, clone: Element, view: Window): void {
+  if (isComputedHidden(source, view)) {
+    clone.remove();
+    return;
+  }
   const styleText = computedStyleText(source, view);
   if (styleText) clone.setAttribute("style", styleText);
   materializePseudos(source, clone, view);
@@ -178,6 +205,14 @@ function inlineComputedTree(source: Element, clone: Element, view: Window): void
   for (let i = 0; i < sourceChildren.length; i++) {
     const cloneChild = cloneChildren[i];
     if (cloneChild) inlineComputedTree(sourceChildren[i], cloneChild, view);
+  }
+}
+
+function isComputedHidden(element: Element, view: Window): boolean {
+  try {
+    return view.getComputedStyle(element).display === "none";
+  } catch {
+    return false;
   }
 }
 
