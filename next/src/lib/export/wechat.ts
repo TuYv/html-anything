@@ -115,14 +115,16 @@ function inlineComputedTree(source: Element, clone: Element, view: Window): void
   if (styleText) clone.setAttribute("style", styleText);
   materializePseudos(source, clone, view);
 
-  const sourceEls = Array.from(source.querySelectorAll("*"));
-  const cloneEls = Array.from(clone.querySelectorAll("*"));
-  for (let i = 0; i < sourceEls.length; i++) {
-    const cloneEl = cloneEls[i];
-    if (!cloneEl) continue;
-    const childStyle = computedStyleText(sourceEls[i], view);
-    if (childStyle) cloneEl.setAttribute("style", childStyle);
-    materializePseudos(sourceEls[i], cloneEl, view);
+  // Pseudo-elements are materialized only in the clone, so global descendant
+  // lists no longer have matching indexes. Recurse through real element
+  // children in lockstep and ignore the generated pseudo spans when matching.
+  const sourceChildren = Array.from(source.children);
+  const cloneChildren = Array.from(clone.children).filter(
+    (child) => !child.hasAttribute("data-pseudo"),
+  );
+  for (let i = 0; i < sourceChildren.length; i++) {
+    const cloneChild = cloneChildren[i];
+    if (cloneChild) inlineComputedTree(sourceChildren[i], cloneChild, view);
   }
 }
 

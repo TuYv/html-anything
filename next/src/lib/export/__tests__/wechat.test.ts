@@ -147,6 +147,46 @@ describe("toWechatHtmlFromDocument", () => {
     }
   });
 
+  it("keeps descendant styles aligned when an ancestor has generated content", () => {
+    document.body.innerHTML = `
+      <div class="card"><span class="label">Hello</span></div>
+    `;
+
+    const original = window.getComputedStyle.bind(window);
+    const stub = ((el: Element, pseudo?: string | null) => {
+      const base = original(el);
+      const overrides: Record<string, string> = {};
+      if (pseudo === "::before" && (el as HTMLElement).matches?.(".card")) {
+        overrides.content = '"Badge"';
+      } else if (!pseudo && (el as HTMLElement).matches?.(".label")) {
+        overrides.color = "rgb(255, 0, 0)";
+      }
+      return new Proxy(base, {
+        get(target, prop) {
+          if (prop === "getPropertyValue") {
+            return (name: string) => overrides[name] ?? target.getPropertyValue(name);
+          }
+          const value = (target as unknown as Record<string | symbol, unknown>)[prop];
+          return typeof value === "function" ? (value as () => unknown).bind(target) : value;
+        },
+      });
+    }) as typeof window.getComputedStyle;
+    window.getComputedStyle = stub;
+
+    try {
+      const body = parseFragment(toWechatHtmlFromDocument(document));
+      const card = body.querySelector(".card");
+      const pseudo = card?.querySelector("[data-pseudo='::before']");
+      const label = card?.querySelector(".label");
+
+      expect(pseudo?.textContent).toBe("Badge");
+      expect(pseudo?.getAttribute("style") ?? "").not.toContain("color: rgb(255, 0, 0)");
+      expect(label?.getAttribute("style") ?? "").toContain("color: rgb(255, 0, 0)");
+    } finally {
+      window.getComputedStyle = original as typeof window.getComputedStyle;
+    }
+  });
+
   it("clamps oversized spacing and drops negative margins", () => {
     document.head.innerHTML = `
       <style>
