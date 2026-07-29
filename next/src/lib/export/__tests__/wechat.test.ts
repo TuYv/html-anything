@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { toWechatHtmlFromDocument } from "../wechat";
+import { toWechatHtmlForExport, toWechatHtmlFromDocument } from "../wechat";
 
 function parseFragment(html: string): HTMLBodyElement {
   return new DOMParser().parseFromString(`<body>${html}</body>`, "text/html")
@@ -209,5 +209,20 @@ describe("toWechatHtmlFromDocument", () => {
     expect(style).not.toContain("-24px");
     expect(style).not.toContain("180px");
     expect(style).not.toContain("96px");
+  });
+
+  it("keeps every deck slide when the selected iframe contains only one slide", () => {
+    const fullDeck = `<!doctype html><html><body>
+      <section class="slide" data-slide-id="1"><h1>Slide one</h1></section>
+      <section class="slide" data-slide-id="2"><h1>Slide two</h1></section>
+    </body></html>`;
+    const selectedSlide = new DOMParser().parseFromString(
+      `<!doctype html><html><body><section class="slide"><h1>Slide two</h1></section></body></html>`,
+      "text/html",
+    );
+
+    const exported = toWechatHtmlForExport(fullDeck, selectedSlide);
+    expect(exported).toContain("Slide one");
+    expect(exported).toContain("Slide two");
   });
 });

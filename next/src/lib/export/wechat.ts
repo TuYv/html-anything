@@ -1,6 +1,7 @@
 "use client";
 
 import juice from "juice";
+import { isDeck } from "../deck";
 import { copyHtml } from "./clipboard";
 
 /**
@@ -105,9 +106,16 @@ export function toWechatHtmlFromDocument(renderedDoc: Document): string {
   return section.outerHTML;
 }
 
+export function toWechatHtmlForExport(
+  fullHtml: string,
+  renderedDoc?: Document | null,
+ ): string {
+  if (isDeck(fullHtml)) return toWechatHtml(fullHtml);
+  return renderedDoc?.body ? toWechatHtmlFromDocument(renderedDoc) : toWechatHtml(fullHtml);
+}
+
 export async function copyToWechat(fullHtml: string, renderedDoc?: Document | null): Promise<void> {
-  const html = renderedDoc?.body ? toWechatHtmlFromDocument(renderedDoc) : toWechatHtml(fullHtml);
-  await copyHtml(html);
+  await copyHtml(toWechatHtmlForExport(fullHtml, renderedDoc));
 }
 
 function inlineComputedTree(source: Element, clone: Element, view: Window): void {
